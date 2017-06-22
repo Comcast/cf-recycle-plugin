@@ -20,5 +20,5 @@ Binaries are available in the releases section.
 
 ### Usage
 ```sh
-cf recycle-app <APP NAME>
+cf recycle <APP NAME>
 ```

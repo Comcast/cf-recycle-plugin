@@ -116,7 +116,8 @@ func (cmd *CfRecycleCmd) getInstanceStatus(cliConnection plugin.CliConnection, i
 
 	for _, v := range instanceStatus {
 		v = strings.TrimSpace(v)
-		if strings.Fields(v)[0] == fmt.Sprintf("#%v", instance) {
+		fields := strings.Fields(v)
+		if len(fields) > 0 && fields[0] == fmt.Sprintf("#%v", instance) {
 			status = strings.Fields(v)[1]
 		}
 	}
