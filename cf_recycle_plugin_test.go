@@ -19,9 +19,9 @@ package main
 import (
 	"errors"
 
-	"github.com/cloudfoundry/cli/plugin"
-	"github.com/cloudfoundry/cli/plugin/fakes"
-	"github.com/cloudfoundry/cli/plugin/models"
+	"code.cloudfoundry.org/cli/plugin"
+	"code.cloudfoundry.org/cli/plugin/pluginfakes"
+	"code.cloudfoundry.org/cli/plugin/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -47,7 +47,7 @@ var _ = Describe("CfRecyclePlugin", func() {
 	Describe(".RecycleCommand", func() {
 		var recycleCmd *CfRecycleCmd
 		var ctrlAppName string
-		var fakeConnection *fakes.FakeCliConnection
+		var fakeConnection *pluginfakes.FakeCliConnection
 		var ctrlArgs []string
 		var err error
 
@@ -55,7 +55,7 @@ var _ = Describe("CfRecyclePlugin", func() {
 			ctrlAppName = "myTestApp#1.2.3-abcde"
 			ctrlArgs = []string{"recycle-app", ctrlAppName}
 			recycleCmd = &CfRecycleCmd{}
-			fakeConnection = &fakes.FakeCliConnection{}
+			fakeConnection = &pluginfakes.FakeCliConnection{}
 		})
 
 		Context("when called with a valid connection and valid application name", func() {
