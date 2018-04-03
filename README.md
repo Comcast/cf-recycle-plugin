@@ -5,16 +5,17 @@ This Cloudfoundry cli plugin is to allow the recycling of application instances 
 The plugin works by restarting individual Application Instances(AI's) waiting for one to fully restart before moving on to the next.
 
 ### Prerequisites
-The plugin was built and tested using the below version
-1. Golang 1.9.2
-2. CloudFoundry CLI 6.33.1
+The plugin was built and tested using the below versions
+1. Golang 1.10.0
+2. CloudFoundry CLI 6.35.2
 
 ### Installation from Source
+Using your favorite versioning system, set variables for the major, minor, and patch versions.
 ```sh
 git clone git@github.com:comcast/cf-recycle-plugin.git
 go get github.com/cloudfoundry/cli
-go build -o deploy/cf-recycle-plugin
-cf install-plugin deploy/cf-recycle-plugin -f
+govendor build -ldflags "-X main.Major=${major} -X main.Minor=${minor} -X main.Patch=${patch}" -o out/cf-recycle-plugin cf_recycle_plugin.go
+cf install-plugin out/cf-recycle-plugin -f
 ```
 ### Download
 Binaries are available in the releases section.
