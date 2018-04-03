@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudfoundry/cli/plugin"
+	"code.cloudfoundry.org/cli/plugin"
 )
 
 // constants
@@ -31,17 +31,29 @@ const (
 	PluginName              = "cf-recycle-plugin"
 )
 
+// Version build flags passed in at time of build
+var (
+	Major string
+	Minor string
+	Patch string
+)
+
 // CfRecycleCmd - struct to initialize.
 type CfRecycleCmd struct{}
 
 //GetMetadata - required method to implement plugin
 func (CfRecycleCmd) GetMetadata() plugin.PluginMetadata {
+
+	major, _ := strconv.Atoi(Major)
+	minor, _ := strconv.Atoi(Minor)
+	patch, _ := strconv.Atoi(Patch)
+
 	return plugin.PluginMetadata{
 		Name: PluginName,
 		Version: plugin.VersionType{
-			Major: 0,
-			Minor: 0,
-			Build: 1,
+			Major: major,
+			Minor: minor,
+			Build: patch,
 		},
 		Commands: []plugin.Command{
 			{
