@@ -6,8 +6,8 @@ The plugin works by restarting individual Application Instances(AI's) waiting fo
 
 ### Prerequisites
 The plugin was built and tested using the below versions
-1. Golang 1.10.0
-2. CloudFoundry CLI 6.35.2
+1. Golang 1.13.5
+2. CloudFoundry CLI 6.48.0
 
 ### Installation from Source
 Using your favorite versioning system, set variables for the major, minor, and patch versions.
