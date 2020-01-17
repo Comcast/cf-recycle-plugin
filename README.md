@@ -13,8 +13,7 @@ The plugin was built and tested using the below versions
 Using your favorite versioning system, set variables for the major, minor, and patch versions.
 ```sh
 git clone git@github.com:comcast/cf-recycle-plugin.git
-go get github.com/cloudfoundry/cli
-govendor build -ldflags "-X main.Major=${major} -X main.Minor=${minor} -X main.Patch=${patch}" -o out/cf-recycle-plugin cf_recycle_plugin.go
+go build -ldflags "-X main.Major=${major} -X main.Minor=${minor} -X main.Patch=${patch}" -o out/cf-recycle-plugin cf_recycle_plugin.go
 cf install-plugin out/cf-recycle-plugin -f
 ```
 ### Download
