@@ -91,9 +91,8 @@ func (cmd *CfRecycleCmd) RecycleCommand(cliConnection plugin.CliConnection, args
 		name     string
 	)
 
-	fmt.Printf("Restarting %s...\n", args[1])
 	cmd.startTime = time.Now()
-
+	fmt.Printf("Restarting %s at %v...\n", args[1], cmd.startTime)
 	// Get the app guid from the cliConnection
 	apps, err := cliConnection.GetApps()
 
@@ -142,7 +141,7 @@ func (cmd *CfRecycleCmd) restartInstance(cliConnection plugin.CliConnection, app
 	fmt.Printf("Restarting %s instance: %v\n", appName, i)
 
 	if _, err := cliConnection.CliCommandWithoutTerminalOutput(restartArgs...); err == nil {
-		for state != "running" || since.Before(cmd.startTime) {
+		for state != RUNNING || since.Before(cmd.startTime) {
 			time.Sleep(5 * time.Second)
 			state, since = cmd.getInstanceStatus(cliConnection, i, appName)
 		}

@@ -112,7 +112,7 @@ var _ = Describe("CfRecyclePlugin", func() {
 		})
 		Context("when called with a valid connection and valid application name", func() {
 			BeforeEach(func() {
-				then := time.Now().AddDate(0, -1, 0)
+				then := time.Now().AddDate(0, 0, -1)
 
 				fakeConnection.GetAppsReturns([]plugin_models.GetAppsModel{
 					plugin_models.GetAppsModel{
@@ -148,7 +148,7 @@ var _ = Describe("CfRecyclePlugin", func() {
 					Instances: []plugin_models.GetApp_AppInstanceFields{
 						{
 							State: "running",
-							Since: time.Now(),
+							Since: then,
 						},
 						{
 							State: "running",
@@ -162,12 +162,57 @@ var _ = Describe("CfRecyclePlugin", func() {
 
 					Instances: []plugin_models.GetApp_AppInstanceFields{
 						{
-							State: "running",
-							Since: time.Now(),
+							State: "down",
+							Since: then,
 						},
 						{
 							State: "running",
-							Since: time.Now(),
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(3, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+						{
+							State: "running",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(4, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+						{
+							State: "down",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(5, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
 						},
 					},
 				}, nil)
