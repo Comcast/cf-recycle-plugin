@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"code.cloudfoundry.org/cli/plugin"
@@ -29,6 +28,10 @@ import (
 const (
 	CfRecyclePluginHelpText = "Recycle CF Application Instances"
 	PluginName              = "cf-recycle-plugin"
+
+	// Cloudfoundry states
+	RUNNING = "running"
+	STARTED = "started"
 )
 
 // Version build flags passed in at time of build
@@ -39,7 +42,10 @@ var (
 )
 
 // CfRecycleCmd - struct to initialize.
-type CfRecycleCmd struct{}
+type CfRecycleCmd struct {
+	startTime time.Time
+	appName   string
+}
 
 //GetMetadata - required method to implement plugin
 func (CfRecycleCmd) GetMetadata() plugin.PluginMetadata {
@@ -71,7 +77,7 @@ func main() {
 
 // Run - required method to implement plugin.
 func (cmd *CfRecycleCmd) Run(cliConnection plugin.CliConnection, args []string) {
-	if args[0] == "recycle" {
+	if args[0] == "recycle" && len(args) == 2 {
 		cmd.RecycleCommand(cliConnection, args)
 	}
 }
@@ -80,63 +86,80 @@ func (cmd *CfRecycleCmd) Run(cliConnection plugin.CliConnection, args []string) 
 func (cmd *CfRecycleCmd) RecycleCommand(cliConnection plugin.CliConnection, args []string) (err error) {
 
 	var (
-		totalInstances int
+		guid     string
+		appState string
+		name     string
 	)
-	//Get app status from cf cli
-	appArgs := append([]string{"app"}, args[1:]...)
 
-	if appStatus, err := cliConnection.CliCommandWithoutTerminalOutput(appArgs...); err == nil {
+	fmt.Printf("Restarting %s...\n", args[1])
+	cmd.startTime = time.Now()
 
-		for _, v := range appStatus {
-			v = strings.TrimSpace(v)
-			if strings.HasPrefix(v, "instances: ") {
-				instances := strings.Split(strings.TrimPrefix(v, "instances: "), "/")
-				totalInstances, _ = strconv.Atoi(instances[1])
-			}
-		}
+	// Get the app guid from the cliConnection
+	apps, err := cliConnection.GetApps()
 
-		for i := 0; i < totalInstances; i++ {
-			var state = cmd.getInstanceStatus(cliConnection, i, args[1])
-			if state == "running" {
-				cmd.restartInstance(cliConnection, args, i)
-			}
+	if err != nil {
+		fmt.Printf("Error getting apps: %s\n", err.Error())
+		return err
+	}
+
+	for _, app := range apps {
+		if app.Name == args[1] {
+			guid = app.Guid
+			appState = app.State
+			name = app.Name
 		}
 	}
+
+	if guid == "" {
+		return fmt.Errorf("Unable to find application %s", args[1])
+	}
+	if appState != STARTED {
+		return fmt.Errorf("Application %s is not running", args[1])
+	}
+
+	//Get app status from cf cli
+	app, err := cliConnection.GetApp(name)
+
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
+		fmt.Printf("Error getting app status: %s\n", err.Error())
+		return err
+	}
+
+	for i, instance := range app.Instances {
+		if instance.State == RUNNING && instance.Since.Before(cmd.startTime) {
+			cmd.restartInstance(cliConnection, app.Name, i)
+		}
 	}
 	return
 }
 
-func (cmd *CfRecycleCmd) restartInstance(cliConnection plugin.CliConnection, args []string, i int) {
-	var state string
-	restartArgs := []string{"restart-app-instance", args[1], strconv.Itoa(i)}
-	fmt.Printf("Restarting %s instance: %v\n", args[1], i)
+func (cmd *CfRecycleCmd) restartInstance(cliConnection plugin.CliConnection, appName string, i int) {
+	var (
+		state string
+		since time.Time
+	)
+	restartArgs := []string{"restart-app-instance", appName, strconv.Itoa(i)}
+	fmt.Printf("Restarting %s instance: %v\n", appName, i)
+
 	if _, err := cliConnection.CliCommandWithoutTerminalOutput(restartArgs...); err == nil {
-		for state != "down" {
-			state = cmd.getInstanceStatus(cliConnection, i, args[1])
-			time.Sleep(10 * time.Second)
-		}
-		for state != "running" {
-			state = cmd.getInstanceStatus(cliConnection, i, args[1])
-			time.Sleep(10 * time.Second)
+		for state != "running" || since.Before(cmd.startTime) {
+			time.Sleep(5 * time.Second)
+			state, since = cmd.getInstanceStatus(cliConnection, i, appName)
 		}
 	}
 }
 
-func (cmd *CfRecycleCmd) getInstanceStatus(cliConnection plugin.CliConnection, instance int, appName string) (status string) {
+func (cmd *CfRecycleCmd) getInstanceStatus(cliConnection plugin.CliConnection, instance int, appGUID string) (status string, since time.Time) {
 
 	//Get app status from cf cli
-	instanceArgs := []string{"app", appName}
-	instanceStatus, _ := cliConnection.CliCommandWithoutTerminalOutput(instanceArgs...)
+	if app, err := cliConnection.GetApp(appGUID); err == nil {
+		if len(app.Instances) > instance {
+			inst := app.Instances[instance]
 
-	for _, v := range instanceStatus {
-		v = strings.TrimSpace(v)
-		fields := strings.Fields(v)
-		if len(fields) > 0 && fields[0] == fmt.Sprintf("#%v", instance) {
-			status = strings.Fields(v)[1]
+			status = inst.State
+			since = inst.Since
+			fmt.Printf("Instance %v Status: %s Since: %v\n", instance, status, since)
 		}
 	}
-	fmt.Printf("Instance %v Status: %s\n", instance, status)
 	return
 }
