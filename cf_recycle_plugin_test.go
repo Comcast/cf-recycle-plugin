@@ -18,6 +18,7 @@ package main
 
 import (
 	"errors"
+	"time"
 
 	"code.cloudfoundry.org/cli/plugin"
 	plugin_models "code.cloudfoundry.org/cli/plugin/models"
@@ -53,16 +54,168 @@ var _ = Describe("CfRecyclePlugin", func() {
 
 		BeforeEach(func() {
 			ctrlAppName = "myTestApp#1.2.3-abcde"
-			ctrlArgs = []string{"recycle-app", ctrlAppName}
+			ctrlArgs = []string{"recycle", ctrlAppName}
 			recycleCmd = &CfRecycleCmd{}
 			fakeConnection = &pluginfakes.FakeCliConnection{}
 		})
+		Context("when called and unable to retrieve a list of applications from cloudfoundry", func() {
+			BeforeEach(func() {
+				fakeConnection.GetAppsReturns([]plugin_models.GetAppsModel{}, errors.New("unable to get apps"))
+				err = recycleCmd.RecycleCommand(fakeConnection, ctrlArgs)
+			})
+			It("should return an error", func() {
+				Ω(err).Should(HaveOccurred())
+			})
+		})
+		Context("when called and the application is not in a started state", func() {
+			BeforeEach(func() {
 
+				fakeConnection.GetAppsReturns([]plugin_models.GetAppsModel{
+					plugin_models.GetAppsModel{
+						Name:  "firstAppName",
+						State: "started",
+						Guid:  "abcd38586erewrwe",
+					},
+					plugin_models.GetAppsModel{
+						Name:  ctrlAppName,
+						State: "stopped",
+						Guid:  "dflgkjdlgjdfkg6567575",
+					},
+				}, nil)
+				err = recycleCmd.RecycleCommand(fakeConnection, ctrlArgs)
+			})
+			It("should return an error", func() {
+				Ω(err).Should(HaveOccurred())
+			})
+		})
+		Context("when called and unable to get the app status", func() {
+			BeforeEach(func() {
+
+				fakeConnection.GetAppsReturns([]plugin_models.GetAppsModel{
+					plugin_models.GetAppsModel{
+						Name:  "firstAppName",
+						State: "started",
+						Guid:  "abcd38586erewrwe",
+					},
+					plugin_models.GetAppsModel{
+						Name:  ctrlAppName,
+						State: "started",
+						Guid:  "dflgkjdlgjdfkg6567575",
+					},
+				}, nil)
+				fakeConnection.GetAppReturns(plugin_models.GetAppModel{}, errors.New("unable to get app status"))
+				err = recycleCmd.RecycleCommand(fakeConnection, ctrlArgs)
+			})
+			It("should return an error", func() {
+				Ω(err).Should(HaveOccurred())
+			})
+		})
 		Context("when called with a valid connection and valid application name", func() {
 			BeforeEach(func() {
-				fakeConnection.GetAppReturns(plugin_models.GetAppModel{
+				then := time.Now().AddDate(0, 0, -1)
+
+				fakeConnection.GetAppsReturns([]plugin_models.GetAppsModel{
+					plugin_models.GetAppsModel{
+						Name:  "firstAppName",
+						State: "started",
+						Guid:  "abcd38586erewrwe",
+					},
+					plugin_models.GetAppsModel{
+						Name:  ctrlAppName,
+						State: "started",
+						Guid:  "dflgkjdlgjdfkg6567575",
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(0, plugin_models.GetAppModel{
 					Name: ctrlAppName,
-				}, errors.New("Failed to find app"))
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: then,
+						},
+						{
+							State: "running",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(1, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: then,
+						},
+						{
+							State: "running",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(2, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "down",
+							Since: then,
+						},
+						{
+							State: "running",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(3, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+						{
+							State: "running",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(4, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+						{
+							State: "down",
+							Since: then,
+						},
+					},
+				}, nil)
+				fakeConnection.GetAppReturnsOnCall(5, plugin_models.GetAppModel{
+					Name: ctrlAppName,
+					Guid: "dflgkjdlgjdfkg6567575",
+
+					Instances: []plugin_models.GetApp_AppInstanceFields{
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+						{
+							State: "running",
+							Since: time.Now().Add(10 * time.Second),
+						},
+					},
+				}, nil)
 				err = recycleCmd.RecycleCommand(fakeConnection, ctrlArgs)
 			})
 
@@ -70,7 +223,7 @@ var _ = Describe("CfRecyclePlugin", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
-		XContext("when called with a valid connection and an invalid application name", func() {
+		Context("when called with a valid connection and an invalid application name", func() {
 			BeforeEach(func() {
 				fakeConnection.GetAppReturns(plugin_models.GetAppModel{
 					Name: "asasa",
